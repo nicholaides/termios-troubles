@@ -21,7 +21,7 @@ function writeWithTermios() {
 
   // setImmediate and process.nextTick-- still happens
   // setTimeout-- fixes it (usually but not always)
-  termios.writeTo(fd, native.ACTION.TCSADRAIN) // write the same settings
+  termios.writeTo(fd, native.ACTION.TCSADRAIN | native.ACTION.TCSASOFT) // write the same settings
 
   pty.write('three\n')
 }
@@ -32,9 +32,11 @@ pty.onData(data => {
   // stringify to clarify what chunks are received
   console.log(JSON.stringify(data))
 
-  // wait for "one\r\n" to be echoed and "ONE\r\n" to be output to ensure that
-  // the child process' stdio is set up before running the test
-  if (++chunks === 2) {
+  // wait for "ONE\r\n" to be output to ensure that the child process' stdio is
+  // set up before running the test
+  if (data.match(/ONE/)) {
      writeWithTermios()
+
+     setTimeout(() => process.exit(), 1000)
   }
 })
