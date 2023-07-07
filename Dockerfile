@@ -1,3 +1,4 @@
+# Dockerfile to run it in Linux
 FROM node:20-bullseye
 
 COPY package.json .

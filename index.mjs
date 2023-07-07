@@ -1,42 +1,46 @@
-import { spawn } from 'node-pty'
-import { Termios, native } from 'node-termios'
+import { spawn } from "node-pty";
+import { Termios, native } from "node-termios";
 
-// translate input to uppercase
-//
-// would use `cat` instead, but `tr` makes it easier to differentiate echo'd
-// input from the child process' output
-const pty = spawn('tr', ['[:lower:]', '[:upper:]'], {})
+const pty =
+  // translate input to uppercase
+  //
+  // `cat` is simpler but `tr` makes it easier to differentiate echo'd input
+  // from the child process' output
+  spawn("tr", ["[:lower:]", "[:upper:]"], {});
 
-// // send stdin to a file to prove that the process does receive all the input
-// const pty = spawn('tee', ['test-output.txt'], {})
+  // alternatively:
+  // send stdin to a file to prove that the process does receive all the input
+  // and that the output is what's dropped
+  // spawn('/bin/sh', ['-c', "tee stdin-log.txt | tr [:lower:] [:upper:]"], {});
 
-const fd = pty.fd
-
-pty.write('one\n')
+pty.write("started\n");
 
 function writeWithTermios() {
-  const termios = new Termios(fd) // get the current termios settings
+  const fd = pty.fd;
 
-  pty.write('two\n')
+  // get the current termios settings
+  const termios = new Termios(fd);
 
-  // setImmediate and process.nextTick-- still happens
-  // setTimeout-- fixes it (usually but not always)
-  termios.writeTo(fd, native.ACTION.TCSADRAIN | native.ACTION.TCSASOFT) // write the same settings
+  pty.write("one\n");
 
-  pty.write('three\n')
+  // write termios settings unchanged
+  termios.writeTo(fd, native.ACTION.TCSADRAIN | native.ACTION.TCSASOFT);
+  // termios.writeTo(fd, native.ACTION.TCSADRAIN);
+  // termios.writeTo(fd, native.ACTION.TCSANOW);
+  // termios.writeTo(fd, native.ACTION.TCSAFLUSH);
+
+  pty.write("two\n");
 }
 
+pty.onData((data) => {
+  process.stdout.write(data);
 
-let chunks = 0
-pty.onData(data => {
-  // stringify to clarify what chunks are received
-  console.log(JSON.stringify(data))
+  // wait for STARTED to be output to ensure that the child process' stdio is
+  // set up and if the spawn process is going to change any termios settings,
+  // that it has already done so
+  if (data.includes("STARTED")) {
+    writeWithTermios();
 
-  // wait for "ONE\r\n" to be output to ensure that the child process' stdio is
-  // set up before running the test
-  if (data.match(/ONE/)) {
-     writeWithTermios()
-
-     setTimeout(() => process.exit(), 1000)
+    setTimeout(() => process.exit(), 1000);
   }
-})
+});
