@@ -1,0 +1,12 @@
+{
+  "name": "termios-troubles",
+  "version": "1.0.0",
+  "description": "Test repo for debugging a bug related to termios",
+  "main": "index.mjs",
+  "author": "Mike Nicholaides <mike@nicholaides.com>",
+  "license": "MIT",
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "node-termios": "^0.1.3"
+  }
+}
